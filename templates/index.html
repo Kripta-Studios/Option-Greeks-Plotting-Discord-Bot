@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Options Data Viewer</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            width: 100%; /* Ensure container is full width */
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            box-sizing: border-box; /* Ensure padding is included in width */
+            margin: 0; /* Remove any default margins */
+            font-size: 16px; /* Consistent font size */
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #6200ea;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #7f39fb;
+        }
+        .gallery {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: space-between; /* Ensures even spacing */
+        }
+        .gallery-image {
+            width: 48%; /* Maintains side-by-side layout */
+            height: 300px; /* Fixed height for consistency */
+            object-fit: contain; /* Preserves aspect ratio */
+            cursor: pointer;
+            border: 1px solid #555;
+            box-sizing: border-box;
+            background-color: #333; /* Optional: background for empty space */
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            overflow: auto;
+        }
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            cursor: zoom-in;
+        }
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .prev, .next {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #fff;
+            font-size: 40px;
+            cursor: pointer;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border: none;
+        }
+        .prev { left: 10px; }
+        .next { right: 10px; }
+        .modal-content.zoomed {
+            transform: scale(1.75);
+            cursor: zoom-out;
+        }
+        .loading {
+            color: #f038ff;
+            margin-top: 10px;
+        }
+        .error {
+            color: #ff4d4d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Options Data Viewer</h1>
+        <form method="POST" id="dataForm">
+            <div class="form-group">
+                <label for="ticker">Ticker:</label>
+                <input type="text" id="ticker" name="ticker" placeholder="Ej: AAPL" required>
+            </div>
+            <div class="form-group">
+                <label for="exp">Expiration:</label>
+                <select id="exp" name="exp" required>
+                    <option value="0dte">0dte</option>
+                    <option value="1dte">1dte</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="opex">Opex</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="all">All</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="greek">Greek:</label>
+                <select id="greek" name="greek" required>
+                    <option value="delta">Delta</option>
+                    <option value="gamma">Gamma</option>
+                    <option value="vanna">Vanna</option>
+                    <option value="charm">Charm</option>
+                </select>
+            </div>
+            <button type="submit">Load</button>
+        </form>
+        <div id="loading" class="loading" style="display: none;">Loading plots...</div>
+        {% if error %}
+            <div class="error">{{ error }}</div>
+            <script>document.getElementById('loading').style.display = 'none';</script>
+        {% endif %}
+        {% if images %}
+            <div class="gallery">
+                {% for image in images %}
+                    <img src="{{ image }}" alt="Gráfico de {{ greek|default('opciones') }}" class="gallery-image" data-index="{{ loop.index0 }}">
+                {% endfor %}
+            </div>
+            <div id="imageModal" class="modal">
+                <span class="close">×</span>
+                <img class="modal-content" id="modalImage">
+                <button class="prev" onclick="changeImage(-1)">❮</button>
+                <button class="next" onclick="changeImage(1)">❯</button>
+            </div>
+            <script>document.getElementById('loading').style.display = 'none';</script>
+        {% endif %}
+    </div>
+    <script>
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImage');
+        const images = document.querySelectorAll('.gallery-image');
+        const loading = document.getElementById('loading');
+        const form = document.getElementById('dataForm');
+        let currentIndex = 0;
+
+        form.addEventListener('submit', function() {
+            const errorDiv = document.querySelector('.error');
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+            }
+            loading.style.display = 'block';
+        });
+
+        images.forEach(img => {
+            img.addEventListener('click', function() {
+                currentIndex = parseInt(this.getAttribute('data-index'));
+                modal.style.display = 'block';
+                modalImg.src = this.src;
+                modalImg.classList.remove('zoomed');
+            });
+        });
+
+        document.querySelector('.close').addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        function changeImage(direction) {
+            currentIndex = (currentIndex + direction + images.length) % images.length;
+            modalImg.src = images[currentIndex].src;
+            modalImg.classList.remove('zoomed');
+        }
+
+        modalImg.addEventListener('click', function() {
+            this.classList.toggle('zoomed');
+        });
+
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        window.addEventListener('load', function() {
+            loading.style.display = 'none';
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (modal.style.display === 'block') {
+                if (event.key === 'Escape' || event.keyCode === 27) {
+                    modal.style.display = 'none';
+                } else if (event.key === 'ArrowLeft' || event.keyCode === 37) {
+                    changeImage(-1);
+                } else if (event.key === 'ArrowRight' || event.keyCode === 39) {
+                    changeImage(1);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
