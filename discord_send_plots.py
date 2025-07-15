@@ -130,7 +130,9 @@ async def send_plot_to_discord(filenames, ticker, exp, greek, channel_id):
 
         message = f"{ticker}/{exp}/{greek} at {datetime.now(ZoneInfo("America/New_York")).ctime()} EST"
         await channel.send(message)
-        print(f"Sent message: {message} to Discord channel {channel_key}")
+        message = "Render Webservice"
+        await channel.send(message)
+        #print(f"Sent message: {message} to Discord channel {channel_key}")
         # Let discord.File handle the file opening
         files = []
         for i in filenames:
