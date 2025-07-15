@@ -128,7 +128,7 @@ async def plot_greeks_table(
                 pivot_table = pivot_table.reindex(index=strikes, columns=expirations, fill_value=0)
                 
                 # Calcular el rango máximo para una escala de colores simétrica
-                max_abs = max(abs(pivot_table.min().min()), abs(pivot_table.max().max()))
+                max_abs = max(abs(math.floor(pivot_table.min().min())), abs(math.ceil(pivot_table.max().max())))
                 if max_abs == 0:
                     max_abs = 1e-6
                 
