@@ -11,6 +11,7 @@ loop = asyncio.get_event_loop()
 
 async def run_bot_async():
     try:
+        webserver.keep_alive()
         await bot.start(DISCORD_TOKEN)
     except Exception as e:
         print(f"Error running Discord bot: {e}")
