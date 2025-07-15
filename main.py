@@ -4,6 +4,7 @@ from discord_send_plots import start_scheduler
 import asyncio
 from data_plotting import get_options_data
 import re
+import webserver
 
 # Crear un event loop global para manejar las tareas asíncronas
 loop = asyncio.get_event_loop()
