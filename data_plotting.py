@@ -19,6 +19,10 @@ from os import getcwd, makedirs, path, getenv
 import datetime
 from dotenv import load_dotenv
 
+global_max_abs = 0
+# Contador para evitar contracciones frecuentes
+contraction_count = 0
+max_contractions = 3  # Límite de contracciones para mantener consistencia
 async def plot_greeks_table(
         df,
         today_ddt,
@@ -128,9 +132,18 @@ async def plot_greeks_table(
                 pivot_table = pivot_table.reindex(index=strikes, columns=expirations, fill_value=0)
                 
                 # Calcular el rango máximo para una escala de colores simétrica
-                max_abs = max(abs(math.floor(pivot_table.min().min())), abs(math.ceil(pivot_table.max().max())))
+                max_abs = max(abs(pivot_table.min().min()), abs(pivot_table.max().max()))
                 if max_abs == 0:
                     max_abs = 1e-6
+                        
+                global global_max_abs, contraction_count
+                global_max_abs = max(global_max_abs, max_abs)
+                if global_max_abs > max_abs * 1.5 and contraction_count < max_contractions:
+                        global_max_abs = max(max_abs * 1.1, global_max_abs * 0.75)
+                        contraction_count += 1
+                if global_max_abs == 0:
+                        global_max_abs = 1e-6
+                max_abs = global_max_abs
                 
                 # Formatear etiquetas de expiración
                 expiration_labels = [d.strftime('%b %d') for d in expirations]
