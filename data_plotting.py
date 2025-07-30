@@ -878,6 +878,69 @@ async def calc_exposures(
         put_ivs,
     )
 
+def calcular_spx_media(es_price, sofr_rate):
+    dividend_yield = 0.01234
+    denominador = 252
+
+    hoy = datetime.datetime.utcnow() - datetime.timedelta(hours=4)  # Hora NY aprox (UTC-4)
+    hoy = hoy.date()
+    year = hoy.year
+    current_month = hoy.month
+
+    def tercer_viernes(year, month):
+        c = calendar.Calendar()
+        viernes_count = 0
+        for day in c.itermonthdates(year, month):
+            if day.month == month and day.weekday() == 4:
+                viernes_count += 1
+                if viernes_count == 3:
+                    return day
+        return None
+
+    def siguiente_opex_month(current_month):
+        meses_opex = [3, 6, 9, 12]
+        for m in meses_opex:
+            if m >= current_month:
+                return m
+        return 3
+
+    opex_month = siguiente_opex_month(current_month)
+    fecha_opex = tercer_viernes(year, opex_month)
+    if fecha_opex <= hoy:
+        if opex_month == 12:
+            year += 1
+            opex_month = 3
+        else:
+            meses_opex = [3, 6, 9, 12]
+            idx = meses_opex.index(opex_month)
+            opex_month = meses_opex[(idx + 1) % 4]
+            if opex_month == 3:
+                year += 1
+        fecha_opex = tercer_viernes(year, opex_month)
+
+    dias_laborables = 0
+    domingos = 0
+    fecha = hoy
+    while fecha <= fecha_opex:
+        if fecha.weekday() == 6:
+            domingos += 1
+        elif fecha.weekday() < 5:
+            dias_laborables += 1
+        fecha += datetime.timedelta(days=1)
+
+    T1 = dias_laborables / denominador
+    T2 = (dias_laborables + domingos) / denominador
+
+    def spx_from_t(T):
+        return es_price * math.exp(-(sofr_rate - dividend_yield) * T)
+
+    spx_T1 = spx_from_t(T1)
+    spx_T2 = spx_from_t(T2)
+    spx_media = (spx_T1 + spx_T2) / 2
+
+    return spx_media
+
+
 async def get_options_data(ticker, expir, greek_filter):
 
     #inicio = time.perf_counter()
@@ -923,6 +986,28 @@ async def get_options_data(ticker, expir, greek_filter):
    
     SOFR_yield = float((100 - SOFRrate)/100)
 
+    if "SPX" in ticker:
+        utc_now = datetime.datetime.now(datetime.timezone.utc)
+        now_ny = utc_now - datetime.timedelta(hours=4)
+        hora_ny = now_ny.time()
+
+        rth_start = datetime.time(9, 30)
+        rth_end = datetime.time(16, 0)
+    
+        if rth_start <= hora_ny <= rth_end:
+            precio_spot_final = spot_price if spot_price is not None else None
+        else:
+            tickerList2 = [get_future_ticker("/ES")]
+            _, tickers_quotes2 = await tasty_data(session, equities_ticker=tickerList2)
+            for quote2 in tickers_quotes2:
+
+                if "ES" in quote2.get("symbol"):
+                    es_price = float(quote2.get("last"))
+            precio_spot_final = calcular_spx_media(es_price, SOFR_yield)
+
+        spot_price = precio_spot_final
+
+        
     #fin = time.perf_counter()
     #print(f"La descarga del spot price y SOFR tardó {fin - inicio:.4f} segundos. SOFR: ")
 
