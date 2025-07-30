@@ -18,6 +18,7 @@ from pathlib import Path
 from os import getcwd, makedirs, path, getenv
 import datetime
 from dotenv import load_dotenv
+import calendar
 
 global_max_abs = 0
 # Contador para evitar contracciones frecuentes
