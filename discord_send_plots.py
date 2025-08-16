@@ -142,7 +142,7 @@ async def send_plot_to_discord(filenames, ticker, exp, greek, channel_id):
             files.append(tmp)
         for i in files:
             await channel.send(files=i)
-            print(f"Sent {i} to Discord channel {channel_key}")
+            #print(f"Sent {i} to Discord channel {channel_key}")
     except Exception as e:
         print(f"Failed to send {filenames} to {channel_key}: {type(e).__name__} - {e}")
 
@@ -206,4 +206,5 @@ async def start_scheduler():
     )
     sched.start()
     
+
 
