@@ -127,8 +127,8 @@ async def send_plot_to_discord(filenames, ticker, exp, greek, channel_id):
                 return
     
     try:
-
-        message = f"{ticker}/{exp}/{greek} at {datetime.now(ZoneInfo("America/New_York")).ctime()} EST"
+        timeInfo = "America/New_York"
+        message = f"{ticker}/{exp}/{greek} at {datetime.now(ZoneInfo(timeInfo)).ctime()} EST"
         await channel.send(message)
         await channel.send("Only discord bot")
         #print(f"Sent message: {message} to Discord channel {channel_key}")
@@ -206,5 +206,6 @@ async def start_scheduler():
     )
     sched.start()
     
+
 
 
