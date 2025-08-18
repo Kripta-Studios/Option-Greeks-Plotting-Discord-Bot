@@ -190,7 +190,7 @@ async def plot_greeks_table(
                     max_positive_idx = len(strikes) - np.searchsorted(strikes[::-1], max_positive_strike, side='left') - 1
                     ax.axhline(
                         y=max_positive_idx,
-                        color="yellow",
+                        color="lime",
                         linestyle="--",
                         linewidth=1.2,
                         label=f"Max Positive {name}: {max_positive_strike:.2f}",
@@ -201,7 +201,7 @@ async def plot_greeks_table(
                     max_negative_idx = len(strikes) - np.searchsorted(strikes[::-1], max_negative_strike, side='left') - 1
                     ax.axhline(
                         y=max_negative_idx,
-                        color="purple",
+                        color="red",
                         linestyle="--",
                         linewidth=1.2,
                         label=f"Max Negative {name}: {max_negative_strike:.2f}",
@@ -1356,4 +1356,5 @@ async def get_options_data(ticker, expir, greek_filter):
     
     return [histogram_filename, table_filename]
     
+
 
