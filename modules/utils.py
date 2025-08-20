@@ -31,23 +31,35 @@ def get_friday_of_this_week():
 
 @cachetools.cached(cache=TTLCache(maxsize=16, ttl=60 * 60 * 4))  # in-memory cache for 4 hrs
 def is_third_friday(date, tz):
-    _, last = monthrange(date.year, date.month)
-    first = datetime.datetime(date.year, date.month, 1)
-    last = datetime.datetime(date.year, date.month, last)
-    result = xcals.get_calendar("XNYS", start=first, end=last)
-    result = result.sessions.to_pydatetime()
-   
-    found = [False, False]
-    for i in result:
-        if i.weekday() == 4 and 15 <= i.day <= 21 and i.month == date.month:
-            # Third Friday
-            found[0] = i.replace(tzinfo=ZoneInfo(tz)) + timedelta(hours=16)
-        elif i.weekday() == 3 and 15 <= i.day <= 21 and i.month == date.month:
-            # Thursday alternative
-            found[1] = i.replace(tzinfo=ZoneInfo(tz)) + timedelta(hours=16)
-    # returns Third Friday if market open,
-    # else if market closed returns the Thursday before it
-    return (found[0], result) if found[0] else (found[1], result)
+    def get_third_friday_or_thursday(year, month, tz):
+        _, last = monthrange(year, month)
+        first = datetime.datetime(year, month, 1)
+        last = datetime.datetime(year, month, last)
+        result = xcals.get_calendar("XNYS", start=first, end=last)
+        result = result.sessions.to_pydatetime()
+
+        found = [None, None]
+        for i in result:
+            if i.weekday() == 4 and 15 <= i.day <= 21 and i.month == month:
+                # Third Friday
+                found[0] = i.replace(tzinfo=ZoneInfo(tz)) + timedelta(hours=16)
+            elif i.weekday() == 3 and 15 <= i.day <= 21 and i.month == month:
+                # Thursday alternative
+                found[1] = i.replace(tzinfo=ZoneInfo(tz)) + timedelta(hours=16)
+        return found[0] or found[1], result
+
+    # Intentamos con el mes actual
+    candidate, result = get_third_friday_or_thursday(date.year, date.month, tz)
+    if candidate and pd.Timestamp(date).date() > candidate.date():
+        # Si la fecha actual ya pasó, buscar en el siguiente mes
+        next_month = date.month + 1
+        next_year = date.year
+        if next_month > 12:
+            next_month = 1
+            next_year += 1
+        candidate, result = get_third_friday_or_thursday(next_year, next_month, tz)
+    
+    return candidate, result
 
 def expir_to_datetime(expir: str):
     tz = "America/New_York"
@@ -382,7 +394,7 @@ def get_SOFR_ticker():
     return ticker
 
 
-def get_future_ticker(symbol: str, current_date: datetime.datetime = None, monthly: bool = None) -> str:
+def get_future_ticker(symbol: str, current_date: datetime.datetime = None, monthly: bool = None, tz: str = "America/New_York") -> str:
     """
     Devuelve el ticker de futuros siguiente a la fecha actual para el símbolo dado.
     - Detecta automáticamente si el contrato es mensual o trimestral según el símbolo.
@@ -390,7 +402,7 @@ def get_future_ticker(symbol: str, current_date: datetime.datetime = None, month
     - Si `monthly` se especifica, sobrescribe la detección automática.
     """
     if current_date is None:
-        current_date = datetime.datetime.utcnow()
+        current_date = datetime.datetime.now(ZoneInfo(tz))
 
     symbol = symbol.upper().lstrip("/")  # elimina prefijo "/" si existe
 
@@ -398,7 +410,7 @@ def get_future_ticker(symbol: str, current_date: datetime.datetime = None, month
     monthly_contracts = {
         'CL', 'QM', 'BZ',      # Petróleo
         'NG', 'QG',            # Gas natural
-        'GC', 'HG', 'PL',# Metales
+        'GC', 'HG', 'PL',      # Metales
         'VX',                  # Volatilidad
         'ZT', 'ZF', 'ZN', 'ZB',# Bonos
         'SR3',                 # RBA
@@ -415,12 +427,20 @@ def get_future_ticker(symbol: str, current_date: datetime.datetime = None, month
     }
 
     if monthly:
-        next_month = current_date.month + 1
+        # usar is_third_friday para decidir +1 o +2 meses
+        this_third_friday, _ = is_third_friday(current_date, tz)
+        if current_date > this_third_friday:
+            next_month = current_date.month + 2
+        else:
+            next_month = this_third_friday.month
+
         year = current_date.year
         if next_month > 12:
-            next_month = 1
+            next_month -= 12
             year += 1
+
         code = month_codes[next_month]
+
     else:
         quarterly_months = [3, 6, 9, 12]
         year = current_date.year
@@ -441,6 +461,7 @@ def get_future_ticker(symbol: str, current_date: datetime.datetime = None, month
     year_code = str(year)[-1]
     symbol = '/' + symbol
     return f"{symbol}{code}{year_code}"
+
 
 
 def extract_base_symbol(future_ticker: str) -> str:
@@ -464,3 +485,4 @@ def extract_base_symbol(future_ticker: str) -> str:
             return ticker[:i]  # Devuelve todo lo anterior al mes
 
     raise ValueError(f"No se pudo extraer símbolo base de: {ticker}")
+
