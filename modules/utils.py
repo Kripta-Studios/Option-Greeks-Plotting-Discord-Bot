@@ -451,6 +451,7 @@ def get_future_ticker(symbol: str, current_date: datetime.datetime = None, month
             delta = (4 - weekday + 7) % 7
             third_friday = 1 + delta + 14
             opex = datetime.datetime(year, m, third_friday)
+            opex = opex.replace(tzinfo=ZoneInfo(tz))
             if current_date < opex:
                 code = month_codes[m]
                 break
@@ -485,4 +486,5 @@ def extract_base_symbol(future_ticker: str) -> str:
             return ticker[:i]  # Devuelve todo lo anterior al mes
 
     raise ValueError(f"No se pudo extraer símbolo base de: {ticker}")
+
 
