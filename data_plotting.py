@@ -185,6 +185,9 @@ async def plot_greeks_table(
                 max_positive_strike = agg_by_strike.idxmax()
                 max_negative_strike = agg_by_strike.idxmin()
 
+                net_value = df_filtered[metric].sum() * 100
+                ax.plot([], [], ' ', label=f"Net {name}: {net_value:,.2f}")
+
                 # Encontrar el índice en strikes para el máximo y mínimo
                 if not pd.isna(max_positive_strike):
                     max_positive_idx = len(strikes) - np.searchsorted(strikes[::-1], max_positive_strike, side='left') - 1
@@ -487,6 +490,10 @@ async def plot_greeks_histogram(
                             linewidth=1.2,
                             label=f"{name} Flip: {zero_strike:.2f}"
                         )
+                                        
+                    # Calcular Net Exposure
+                    net_value = metric_data.sum() * 100
+                    plt.plot([], [], ' ', label=f"Net {name}: {net_value:,.2f}")
                     
                 elif "Calls/Puts" in value:
                     metric_data = df_agg[f"total_{name.lower()}"]
@@ -1356,5 +1363,6 @@ async def get_options_data(ticker, expir, greek_filter):
     
     return [histogram_filename, table_filename]
     
+
 
 
