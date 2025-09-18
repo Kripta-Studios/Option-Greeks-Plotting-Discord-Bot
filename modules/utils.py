@@ -196,7 +196,7 @@ def format_data(gr_list, today_ddt):
                 "put_gamma": None,
             }
 
-        is_call = "C" in option["option"]
+        is_call = "C" in option["option"][6:]
 
         if is_call:
             grouped[key]["calls"] = option_code
@@ -486,5 +486,6 @@ def extract_base_symbol(future_ticker: str) -> str:
             return ticker[:i]  # Devuelve todo lo anterior al mes
 
     raise ValueError(f"No se pudo extraer símbolo base de: {ticker}")
+
 
 
