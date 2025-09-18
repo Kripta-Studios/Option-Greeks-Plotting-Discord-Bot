@@ -1192,11 +1192,26 @@ async def get_options_data(ticker, expir, greek_filter):
         tickerList = [ticker]
     useCBOEdelayedData = False
 
-    if ticker == "SPX":
-        tickerList.append("SPXW")
-    if ticker == "SPXW":
-        tickerList.append("SPX")
-    
+    def modify_ticker_list(ticker, tickerList):
+        import pytz
+        # Obtener la fecha y hora actual en Nueva York
+        ny_tz = pytz.timezone('America/New_York')
+        now_ny = datetime.datetime.now(ny_tz)
+        
+        # Verificar si es el tercer viernes (o jueves alternativo) y la hora es >= 9:30 AM
+        candidate, _ = is_third_friday(now_ny, 'America/New_York')
+        is_opex_day = candidate and pd.Timestamp(now_ny).date() == candidate.date()
+        
+        if is_opex_day and now_ny.time() >= datetime.time(9, 30):
+            tickerList[:] = ["SPXW"]  # Reemplazar todo el contenido de tickerList
+        else:
+            # Lógica original
+            if ticker == "SPX":
+                tickerList.append("SPXW")
+            if ticker == "SPXW":
+                tickerList.append("SPX")
+        
+    modify_ticker_list(ticker, tickerList)
     tickerList.append(get_SOFR_ticker())
 
     #inicio = time.perf_counter()
@@ -1363,6 +1378,7 @@ async def get_options_data(ticker, expir, greek_filter):
     
     return [histogram_filename, table_filename]
     
+
 
 
 
