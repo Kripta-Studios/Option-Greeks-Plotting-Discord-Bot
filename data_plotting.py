@@ -1277,7 +1277,13 @@ async def get_options_data(ticker, expir, greek_filter):
 
     if ((selected_date > boundary) or (selected_date == 0)) and ticker == "SPX":
         useCBOEdelayedData = True
-    
+    tickerListAux = []
+    for i in tickerList:
+        if "SR3" in i:
+            continue
+        else:
+            tickerListAux.append(i)
+    tickerList = tickerListAux
     #inicio = time.perf_counter()
     options_expirations, options_strikes = await tasty_expirations_strikes(session, tickerList)
     #fin = time.perf_counter()
@@ -1381,6 +1387,7 @@ async def get_options_data(ticker, expir, greek_filter):
     
     return [histogram_filename, table_filename]
     
+
 
 
 
